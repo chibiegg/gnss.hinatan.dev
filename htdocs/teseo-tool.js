@@ -215,7 +215,10 @@
         ui.stConn.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
         ui.stConn.className = `status-val ${connected ? 'good' : 'bad'}`;
       }
-      if (ui.btnConnect && !isOverlayMode) ui.btnConnect.textContent = connected ? 'Disconnect' : 'Connect';
+      if (ui.btnConnect && !isOverlayMode) {
+        ui.btnConnect.textContent = connected ? 'Disconnect' : 'Connect';
+        ui.btnConnect.classList.toggle('active', connected);
+      }
       if (ui.btnRead) ui.btnRead.disabled = !connected;
       if (ui.btnWrite) ui.btnWrite.disabled = !connected;
       if (ui.btnSave) ui.btnSave.disabled = !connected;
@@ -287,9 +290,30 @@
     }
 
     function shouldCapture(line) {
+      if (!line) return false;
+
+      // Keep the TESEO log focused on configuration tool traffic.
+      // We intentionally do NOT capture general NMEA output (e.g. $Gx...) nor
+      // vendor status sentences not used by this tool (e.g. $PSTMSBAS).
+
       if (line.includes('PSTMCPU')) return false;
-      if (line.includes('PSTM')) return true;
+
+      // Firmware/version output is not PSTM-prefixed.
       if (line.includes('GPSAPP') || line.includes('GNSSLIB') || line.includes('BINIMG')) return true;
+
+      const u = line.toUpperCase();
+
+      // Core config/ack traffic.
+      if (u.includes('PSTMGETPAR')) return true;
+      if (u.includes('PSTMSETPAR')) return true;
+      if (u.includes('PSTMSET,')) return true;
+      if (u.includes('PSTMSET*')) return true;
+      if (u.includes('PSTMSAVEPAR')) return true; // includes PSTMSAVEPAROK
+      if (u.includes('PSTMSRR')) return true;
+
+      // Surface errors related to config commands.
+      if (u.includes('ERROR') && u.includes('PSTM')) return true;
+
       return false;
     }
 
@@ -569,13 +593,47 @@
       // Only tab panels should be toggled; the Serial Log section must remain visible.
       const sections = Array.from(overlay.querySelectorAll('#teseo-main > section[id^="teseo-tab-"], main.main > section[id^="tab-"]'));
 
+      const knownTargets = new Set(buttons.map((b) => b.getAttribute('data-tab')).filter(Boolean));
+
+      const parseHashTarget = () => {
+        if (isOverlayMode) return null;
+        const raw = String(global.location?.hash || '').replace(/^#/, '').trim();
+        if (!raw) return null;
+
+        // Support a few historical formats:
+        // - #constellations
+        // - #tab=constellations
+        // - #teseo-tab-constellations
+        let target = raw;
+        if (target.startsWith('tab=')) target = target.slice(4);
+        if (target.startsWith('teseo-tab-')) target = target.slice('teseo-tab-'.length);
+        if (target.startsWith('tab-')) target = target.slice('tab-'.length);
+
+        if (knownTargets.has(target)) return target;
+        return null;
+      };
+
+      const setHashTarget = (target) => {
+        if (isOverlayMode) return;
+        try {
+          const nextHash = `#${encodeURIComponent(target)}`;
+          if (global.location?.hash === nextHash) return;
+          global.history?.replaceState?.(null, '', nextHash);
+        } catch {
+          // ignore (older browsers / restricted contexts)
+        }
+      };
+
       const activateTab = (target) => {
         buttons.forEach((b) => b.classList.toggle('active', b.getAttribute('data-tab') === target));
         sections.forEach((sec) => sec.classList.add('hidden'));
         qs(`#teseo-tab-${target}`, `#tab-${target}`)?.classList.remove('hidden');
+        setHashTarget(target);
       };
 
-      const initial = buttons.find((b) => b.classList.contains('active'))?.getAttribute('data-tab') || 'constellations';
+      const initial = parseHashTarget()
+        || buttons.find((b) => b.classList.contains('active'))?.getAttribute('data-tab')
+        || 'constellations';
       activateTab(initial);
 
       buttons.forEach((btn) => {
@@ -596,7 +654,7 @@
         const opt = document.createElement('option');
         opt.value = String(br);
         opt.textContent = String(br);
-        if (br === 115200) opt.selected = true;
+        if (br === 9600) opt.selected = true;
         ui.baudSelect.appendChild(opt);
       });
 
@@ -609,7 +667,7 @@
             return;
           }
 
-          const baud = Number(ui.baudSelect.value) || 115200;
+          const baud = Number(ui.baudSelect.value) || 9600;
           setStatus(`Connecting @ ${baud}...`, 'warn');
           await session.connect(baud);
           setStatus('Connected', 'good');
