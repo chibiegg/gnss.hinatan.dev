@@ -437,6 +437,27 @@
       font-size: 11px;
       border-top: 1px solid var(--t-border);
       background: var(--t-bg3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    #teseo-overlay footer a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    #teseo-overlay footer a:hover {
+      color: var(--t-text);
+      border-bottom-color: var(--t-muted);
+    }
+
+    #teseo-overlay footer a:focus-visible {
+      outline: 2px solid var(--t-accent2);
+      outline-offset: 2px;
     }
 
     #teseo-overlay .hidden { display: none; }
@@ -553,7 +574,8 @@
           </main>
 
           <footer>
-            Web Serial API requires HTTPS or localhost. Use Chrome or Edge.
+            <span>Web Serial API requires HTTPS or localhost. Use Chrome or Edge.</span>
+            <span>© <a href="https://x.com/chibiegg">chibiegg (ひなたん)</a></span>
           </footer>
         </div>
       </div>

@@ -190,6 +190,29 @@ body {
   margin-top: 1px;
 }
 
+.site-credit {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.site-credit a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.site-credit a:hover {
+  color: var(--text);
+  border-bottom-color: var(--dim2);
+}
+
+.site-credit a:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
 /* ─── Controls ──────────────────────────────────────────────────────────────── */
 .controls {
   display: flex;
@@ -584,7 +607,7 @@ select:focus { border-color: var(--cyan); }
     <img id="logo-icon" src="./gnss_logo.svg" alt="GNSS" />
     <div>
       <div id="logo-title"><em>GNSS</em> NMEA Viewer</div>
-      <div id="logo-sub">Web Serial API</div>
+      <div class="site-credit">© <a href="https://x.com/chibiegg">chibiegg (ひなたん)</a></div>
     </div>
   </div>
 

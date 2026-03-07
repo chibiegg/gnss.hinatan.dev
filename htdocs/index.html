@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GNSS NMEA Viewer + Teseo-LIV3FL Config</title>
+<title>GNSS NMEA Viewer + Teseo-LIV3FL Settings</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 /* ─── Map Panel ──────────────────────────────────────────────────────────────── */
@@ -190,6 +190,29 @@ body {
   color: var(--dim);
   letter-spacing: 2px;
   margin-top: 1px;
+}
+
+.site-credit {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.site-credit a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.site-credit a:hover {
+  color: var(--text);
+  border-bottom-color: var(--dim2);
+}
+
+.site-credit a:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 /* ─── Controls ──────────────────────────────────────────────────────────────── */
@@ -993,7 +1016,7 @@ body.raw-resizing {
     <img id="logo-icon" src="./gnss_logo.svg" alt="GNSS" />
     <div>
       <div id="logo-title"><em>GNSS</em> NMEA Viewer</div>
-      <div id="logo-sub">Web Serial API</div>
+      <div class="site-credit">© <a href="https://x.com/chibiegg">chibiegg (ひなたん)</a></div>
     </div>
   </div>
 
@@ -1170,10 +1193,10 @@ body.raw-resizing {
 <!-- ─── Teseo Overlay ─────────────────────────────────────────────────────── -->
 <div id="teseo-overlay" aria-hidden="true">
   <div class="teseo-backdrop" id="teseo-backdrop"></div>
-  <div class="teseo-panel" role="dialog" aria-modal="true" aria-label="Teseo-LIV3FL Configuration">
+    <div class="teseo-panel" role="dialog" aria-modal="true" aria-label="Teseo-LIV3FL Settings">
     <div class="teseo-hdr">
       <div class="teseo-title">
-        <div class="name">Teseo-LIV3FL Configuration</div>
+          <div class="name">Teseo-LIV3FL Settings</div>
         <div class="sub">PSTMGETPAR / PSTMSETPAR</div>
       </div>
       <div class="teseo-controls">
@@ -1269,12 +1292,12 @@ body.raw-resizing {
 
           <section class="panel log-panel">
             <h2>Serial Log (filtered)</h2>
-            <div id="teseo-log" class="log log-view" tabindex="0" data-placeholder="Teseoの送信コマンド(>>) と受信レスポンス(<<) はここに出ます"></div>
+            <div id="teseo-log" class="log log-view" tabindex="0" data-placeholder="送信コマンド (>>) と受信レスポンス (<<) がここに表示されます"></div>
           </section>
         </main>
 
         <footer>
-          Uses the same Web Serial connection as the Viewer.
+          Tip: Read to fetch current settings. Write applies changes. Save NVM persists them. Soft Reset reboots the module.
         </footer>
       </div>
     </div>
