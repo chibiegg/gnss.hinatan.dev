@@ -54,7 +54,7 @@ def _already_has_ga(text_lower: str, measurement_id: str) -> bool:
     # Also consider the specific ID in config call.
     if f"gtag('config', '{measurement_id.lower()}')" in text_lower:
         return True
-    if f"gtag(\"config\", \"{measurement_id.lower()}\")" in text_lower:
+    if f'gtag("config", "{measurement_id.lower()}")' in text_lower:
         return True
     return False
 
@@ -129,8 +129,7 @@ def main() -> int:
 
     result = run(args.root, args.measurement_id)
     print(
-        f"GA inject: scanned={result.scanned} modified={result.modified} "
-        f"skipped_already_present={result.skipped_already_present}"
+        f"GA inject: scanned={result.scanned} modified={result.modified} skipped_already_present={result.skipped_already_present}",
     )
     return 0
 
