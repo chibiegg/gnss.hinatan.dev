@@ -198,6 +198,9 @@
       cfgMask: qs('#teseo-cfg-mask', '#cfg-mask'),
       constellationsGrid: qs('#teseo-constellations-grid', '#constellations-grid'),
       constellationWarning: qs('#teseo-constellation-warning'),
+      btnExport: qs('#teseo-btn-export'),
+      btnImport: qs('#teseo-btn-import'),
+      importFile: qs('#teseo-import-file'),
       sbasGrid: qs('#teseo-sbas-grid', '#sbas-grid'),
       nmeaGrid: qs('#teseo-nmea-grid', '#nmea-grid'),
       featuresGrid: qs('#teseo-features-grid', '#features-grid'),
@@ -879,11 +882,57 @@
       setStatus('Soft reset sent', 'warn');
     }
 
+    const CONFIG_KEYS = ['cdb_102', 'cdb_104', 'cdb_135', 'cdb_200', 'cdb_201', 'cdb_227', 'cdb_228', 'cdb_303'];
+
+    function exportConfig() {
+      const data = { fwVersion: teseoConfig.fwVersion };
+      CONFIG_KEYS.forEach(k => { data[k] = teseoConfig[k]; });
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `teseo-config-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus('設定をエクスポートしました', 'good');
+    }
+
+    function importConfig(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          let count = 0;
+          CONFIG_KEYS.forEach(k => {
+            if (data[k] !== undefined) {
+              const val = k === 'cdb_303' ? Number(data[k]) : Number(data[k]);
+              if (!Number.isFinite(val)) return;
+              teseoConfig[k] = val;
+              teseoPending.set(Number(k.replace('cdb_', '')), val);
+              count++;
+            }
+          });
+          renderAll();
+          setStatus(`インポート完了 (${count}件 pending)`, 'good');
+        } catch {
+          setStatus('JSONの読み込みに失敗しました', 'bad');
+        }
+      };
+      reader.readAsText(file);
+    }
+
     function setupHandlers() {
       ui.btnRead?.addEventListener('click', readConfig);
       ui.btnWrite?.addEventListener('click', writeConfig);
       ui.btnSave?.addEventListener('click', saveNvm);
       ui.btnReset?.addEventListener('click', resetDevice);
+      ui.btnExport?.addEventListener('click', exportConfig);
+      ui.btnImport?.addEventListener('click', () => ui.importFile?.click());
+      ui.importFile?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) { importConfig(file); e.target.value = ''; }
+      });
 
       ui.constellationsGrid?.addEventListener('change', (e) => {
         const input = e.target;
