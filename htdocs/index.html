@@ -1040,7 +1040,7 @@ body.raw-resizing {
     <span class="ctrl-label">Baud</span>
     <select id="baud-sel">
       <option value="4800">4800</option>
-      <option value="9600" selected>9600</option>
+      <option value="9600">9600</option>
       <option value="19200">19200</option>
       <option value="38400">38400</option>
       <option value="57600">57600</option>
@@ -1727,6 +1727,7 @@ async function connectSerial() {
   const baud = parseInt(document.getElementById('baud-sel').value);
   try {
     await session.connect(baud);
+    localStorage.setItem('gnss_baud', baud);
     document.getElementById('btn-connect').textContent = 'Disconnect';
     document.getElementById('btn-connect').classList.add('active');
     document.getElementById('baud-sel').disabled = true;
@@ -2332,10 +2333,9 @@ function switchTileLayer(key) {
   if (!leafletMap || !TILE_LAYERS[key]) return;
   if (currentTileLayer) leafletMap.removeLayer(currentTileLayer);
   currentTileLayer = L.tileLayer(TILE_LAYERS[key].url, TILE_LAYERS[key].options).addTo(leafletMap);
-  // Keep track polyline and marker on top
   if (trackPolyline) trackPolyline.bringToFront();
-  if (gpsMarker && leafletMap.hasLayer(gpsMarker)) gpsMarker.bringToFront();
   currentLayerKey = key;
+  localStorage.setItem('gnss_map_layer', key);
   document.querySelectorAll('.map-layer-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.layer === key);
   });
@@ -2348,8 +2348,14 @@ function initMap() {
   leafletMap = L.map('map-container', { zoomControl: true, attributionControl: true })
     .setView([35.6895, 139.6917], 15);
 
-  // Default tile layer
-  currentTileLayer = L.tileLayer(TILE_LAYERS.dark.url, TILE_LAYERS.dark.options).addTo(leafletMap);
+  // Default tile layer (restore saved preference)
+  const savedLayer = localStorage.getItem('gnss_map_layer');
+  const initialLayer = (savedLayer && TILE_LAYERS[savedLayer]) ? savedLayer : 'dark';
+  currentTileLayer = L.tileLayer(TILE_LAYERS[initialLayer].url, TILE_LAYERS[initialLayer].options).addTo(leafletMap);
+  currentLayerKey = initialLayer;
+  document.querySelectorAll('.map-layer-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.layer === initialLayer);
+  });
 
   // Custom pulsing marker
   const markerIcon = L.divIcon({
@@ -2441,6 +2447,13 @@ document.querySelectorAll('.map-layer-btn').forEach(btn => {
     switchTileLayer(btn.dataset.layer);
   });
 });
+
+// Restore saved baud rate
+(function() {
+  const savedBaud = localStorage.getItem('gnss_baud') || '9600';
+  const sel = document.getElementById('baud-sel');
+  if ([...sel.options].some(o => o.value === savedBaud)) sel.value = savedBaud;
+})();
 
 // Start unified render loop (Leaflet is now loaded)
 setInterval(function() { render(); updateMap(); }, 500);
