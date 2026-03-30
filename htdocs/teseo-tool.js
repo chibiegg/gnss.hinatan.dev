@@ -769,6 +769,16 @@
       }
     }
 
+    function checkConstellationConstraints() {
+      const gpsTrack = getBit(200, 16);
+      const gloTrack = getBit(200, 17);
+      const bdsTrack = getBit(227, 8);
+      if (gpsTrack && gloTrack && bdsTrack) {
+        return 'GPS・GLONASS・BeiDouを同時に有効にすることはできません。\n\n有効な組み合わせ:\n  ・GPS + Galileo + QZSS + GLONASS\n  ・GPS + Galileo + QZSS + BeiDou\n  ・GLONASS + BeiDou';
+      }
+      return null;
+    }
+
     async function writeConfig() {
       if (!session.connected) {
         setStatus('Not connected (use top Connect)', 'bad');
@@ -777,6 +787,13 @@
 
       if (!teseoPending.size) {
         setStatus('No pending changes', 'warn');
+        return;
+      }
+
+      const constraintError = checkConstellationConstraints();
+      if (constraintError) {
+        setStatus('無効なコンステレーション組み合わせ', 'bad');
+        alert(`⚠️ 書き込みを中止しました\n\n${constraintError}`);
         return;
       }
 
