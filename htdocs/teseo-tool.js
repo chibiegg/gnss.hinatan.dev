@@ -219,6 +219,7 @@
         ui.btnConnect.textContent = connected ? 'Disconnect' : 'Connect';
         ui.btnConnect.classList.toggle('active', connected);
       }
+      if (ui.baudSelect && !isOverlayMode) ui.baudSelect.disabled = connected;
       if (ui.btnRead) ui.btnRead.disabled = !connected;
       if (ui.btnWrite) ui.btnWrite.disabled = !connected;
       if (ui.btnSave) ui.btnSave.disabled = !connected;
