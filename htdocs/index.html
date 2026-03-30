@@ -288,6 +288,25 @@ select:focus { border-color: var(--cyan); }
 #btn-map:hover { background: rgba(45,212,232,0.1); }
 #btn-map.active { background: rgba(45,212,232,0.15); box-shadow: 0 0 8px rgba(45,212,232,0.2); }
 
+#btn-dop {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+#btn-dop:hover { background: rgba(45,212,232,0.1); }
+#btn-dop.active { background: rgba(45,212,232,0.15); box-shadow: 0 0 8px rgba(45,212,232,0.2); }
+
+#dop-panel {
+  flex-shrink: 0;
+  height: 90px;
+  display: none;
+  flex-direction: column;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+}
+#dop-panel.visible { display: flex; }
+#dop-canvas-wrap { flex: 1; overflow: hidden; }
+#dop-canvas { display: block; }
+
 #btn-reset {
   color: var(--dim);
   border-color: var(--border2);
@@ -1058,6 +1077,7 @@ body.raw-resizing {
     <button class="btn" id="btn-connect">Connect</button>
     <button class="btn" id="btn-demo">Demo</button>
     <button class="btn" id="btn-map">Map</button>
+    <button class="btn" id="btn-dop">DOP</button>
     <button class="btn" id="btn-reset">Reset</button>
     <button class="btn" id="btn-teseo">TESEO</button>
   </div>
@@ -1199,6 +1219,19 @@ body.raw-resizing {
       </div>
     </div>
 
+  </div>
+
+  <!-- DOP Graph -->
+  <div id="dop-panel">
+    <div class="panel-hdr">
+      <span><span class="panel-hdr-icon">&#9638;</span> DOP History</span>
+      <div style="display:flex;gap:12px;font-size:10px;font-weight:bold;letter-spacing:1px;">
+        <span style="color:#2dd4e8">HDOP</span>
+        <span style="color:#c060f0">PDOP</span>
+        <span style="color:#f09040">VDOP</span>
+      </div>
+    </div>
+    <div id="dop-canvas-wrap"><canvas id="dop-canvas"></canvas></div>
   </div>
 
   <!-- Raw NMEA -->
@@ -2177,6 +2210,87 @@ async function copyTextToClipboard(text) {
 
 // ── Render Loop ───────────────────────────────────────────────────────────────
 
+// ── DOP Graph ────────────────────────────────────────────────────────────────
+
+const DOP_MAX_SAMPLES = 180;  // 180 × 500ms = 90 seconds
+const dopHistory = { hdop: [], pdop: [], vdop: [] };
+let dopPanelVisible = false;
+
+function pushDopHistory() {
+  dopHistory.hdop.push(gps.hdop);
+  dopHistory.pdop.push(gps.pdop);
+  dopHistory.vdop.push(gps.vdop);
+  if (dopHistory.hdop.length > DOP_MAX_SAMPLES) {
+    dopHistory.hdop.shift();
+    dopHistory.pdop.shift();
+    dopHistory.vdop.shift();
+  }
+}
+
+function drawDopGraph() {
+  if (!dopPanelVisible) return;
+  const canvas = document.getElementById('dop-canvas');
+  if (!canvas) return;
+  const wrap = document.getElementById('dop-canvas-wrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  if (w === 0 || h === 0) return;
+  canvas.width  = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+
+  // Background grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  const n = dopHistory.hdop.length;
+  if (n < 2) return;
+
+  // Determine Y scale
+  const allVals = [...dopHistory.hdop, ...dopHistory.pdop, ...dopHistory.vdop]
+    .filter(v => v !== null);
+  const maxVal = Math.max(5, ...allVals) * 1.1;
+
+  // Draw grid lines at 1, 2, 3, 5
+  [1, 2, 3, 5].forEach(v => {
+    if (v > maxVal) return;
+    const y = h - (v / maxVal) * h;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '9px monospace';
+    ctx.fillText(v, 2, y - 2);
+  });
+
+  // Draw a series
+  function drawSeries(data, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    data.forEach((v, i) => {
+      if (v === null) { started = false; return; }
+      const x = w - (n - 1 - i) * (w / (DOP_MAX_SAMPLES - 1));
+      const y = h - (v / maxVal) * h;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  drawSeries(dopHistory.pdop, '#c060f0');
+  drawSeries(dopHistory.vdop, '#f09040');
+  drawSeries(dopHistory.hdop, '#2dd4e8');
+}
+
+function toggleDopPanel() {
+  dopPanelVisible = !dopPanelVisible;
+  document.getElementById('dop-panel').classList.toggle('visible', dopPanelVisible);
+  document.getElementById('btn-dop').classList.toggle('active', dopPanelVisible);
+}
+
 function render() {
   cleanupSatellites();
   updateStatus();
@@ -2186,6 +2300,8 @@ function render() {
   updateLegend();
   updateSatTable();
   updateRaw();
+  pushDopHistory();
+  drawDopGraph();
 }
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
@@ -2513,6 +2629,7 @@ function toggleMap() {
 }
 
 document.getElementById('btn-map').addEventListener('click', toggleMap);
+document.getElementById('btn-dop').addEventListener('click', toggleDopPanel);
 
 document.getElementById('btn-follow').addEventListener('click', () => {
   mapFollow = !mapFollow;
