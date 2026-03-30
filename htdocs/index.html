@@ -47,6 +47,7 @@
 
 #map-layer-bar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   padding: 6px 8px;
@@ -1197,6 +1198,8 @@ body.raw-resizing {
         <button class="map-mini-btn map-layer-btn active" data-layer="dark">Dark</button>
         <button class="map-mini-btn map-layer-btn" data-layer="light">Light</button>
         <button class="map-mini-btn map-layer-btn" data-layer="satellite">Satellite</button>
+        <span class="map-layer-sep"></span>
+        <button class="map-mini-btn" id="btn-sbas-overlay">SBAS Areas</button>
       </div>
     </div>
 
@@ -2313,8 +2316,44 @@ let mapVisible    = false;
 let mapInitialized = false;
 let currentTileLayer = null;
 let currentLayerKey  = 'dark';
+let sbasLayerGroup  = null;
+let sbasVisible     = false;
 
 const TRACK_MAX = 2000;
+
+// SBAS service area approximate coverage polygons [lat, lng]
+const SBAS_AREAS = [
+  {
+    name: 'WAAS',
+    desc: 'North America (PRN 131/133/135/138)',
+    color: '#4090ff',
+    coords: [[72,-170],[72,-52],[12,-52],[12,-170]],
+  },
+  {
+    name: 'EGNOS',
+    desc: 'Europe / North Africa (PRN 120/123/126/136)',
+    color: '#40e080',
+    coords: [[76,-32],[76,46],[8,46],[8,-32]],
+  },
+  {
+    name: 'MSAS',
+    desc: 'Japan / West Pacific (PRN 129/137)',
+    color: '#f09040',
+    coords: [[60,100],[60,175],[10,175],[10,100]],
+  },
+  {
+    name: 'GAGAN',
+    desc: 'India (PRN 127/128)',
+    color: '#e040e0',
+    coords: [[40,55],[40,100],[0,100],[0,55]],
+  },
+  {
+    name: 'SDCM',
+    desc: 'Russia (PRN 125/140/141)',
+    color: '#e0e040',
+    coords: [[76,18],[76,180],[44,180],[44,18]],
+  },
+];
 
 const TILE_LAYERS = {
   dark: {
@@ -2392,6 +2431,23 @@ function initMap() {
     mapFollow = false;
     document.getElementById('btn-follow').classList.remove('active');
   });
+
+  // SBAS service area layer group (hidden by default)
+  sbasLayerGroup = L.layerGroup();
+  SBAS_AREAS.forEach(area => {
+    const poly = L.polygon(area.coords, {
+      color:       area.color,
+      fillColor:   area.color,
+      fillOpacity: 0.08,
+      weight:      1.5,
+      opacity:     0.6,
+      dashArray:   '4 4',
+    });
+    poly.bindTooltip(`<b>${area.name}</b><br><span style="font-size:11px">${area.desc}</span>`, {
+      sticky: true,
+    });
+    sbasLayerGroup.addLayer(poly);
+  });
 }
 
 function updateMap() {
@@ -2459,6 +2515,17 @@ document.querySelectorAll('.map-layer-btn').forEach(btn => {
     if (!mapInitialized) return;
     switchTileLayer(btn.dataset.layer);
   });
+});
+
+document.getElementById('btn-sbas-overlay').addEventListener('click', () => {
+  if (!mapInitialized) return;
+  sbasVisible = !sbasVisible;
+  if (sbasVisible) {
+    sbasLayerGroup.addTo(leafletMap);
+  } else {
+    sbasLayerGroup.remove();
+  }
+  document.getElementById('btn-sbas-overlay').classList.toggle('active', sbasVisible);
 });
 
 // Restore saved baud rate
