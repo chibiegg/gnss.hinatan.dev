@@ -1167,8 +1167,9 @@ body.raw-resizing {
 
     <!-- Sky View -->
     <div id="sky-panel">
-      <div class="panel-hdr">
-        <span class="panel-hdr-icon">&#9711;</span> Sky View
+      <div class="panel-hdr" style="justify-content:space-between;">
+        <span><span class="panel-hdr-icon">&#9711;</span> Sky View</span>
+        <button class="map-mini-btn" id="btn-sat-trails">Trails</button>
       </div>
       <div id="sky-canvas-wrap">
         <canvas id="sky-canvas" width="260" height="260"></canvas>
@@ -1825,6 +1826,30 @@ function resizeSky() {
   ctx.scale(dpr, dpr);
 }
 
+// ── Satellite Trails ─────────────────────────────────────────────────────────
+const SAT_TRAIL_MAX = 120; // 120 × 500ms = 60 seconds
+const satTrails = {};
+let satTrailsVisible = false;
+
+function updateSatTrails() {
+  const active = new Set();
+  for (const sat of Object.values(gps.satellites)) {
+    if (sat.elevation == null || sat.azimuth == null) continue;
+    const key = sat.prn;
+    active.add(key);
+    if (!satTrails[key]) satTrails[key] = [];
+    const trail = satTrails[key];
+    const last = trail[trail.length - 1];
+    if (!last || Math.abs(last.az - sat.azimuth) > 0.05 || Math.abs(last.el - sat.elevation) > 0.05) {
+      trail.push({ az: sat.azimuth, el: sat.elevation, system: sat.system });
+      if (trail.length > SAT_TRAIL_MAX) trail.shift();
+    }
+  }
+  for (const key of Object.keys(satTrails)) {
+    if (!active.has(Number(key))) delete satTrails[key];
+  }
+}
+
 function drawSky() {
   const W = canvas.width  / dpr;
   const H = canvas.height / dpr;
@@ -1897,6 +1922,27 @@ function drawSky() {
   ctx.fillText('E', cx + labelR, cy);
   ctx.fillText('W', cx - labelR, cy);
   ctx.textBaseline = 'alphabetic';
+
+  // Satellite trails
+  if (satTrailsVisible) {
+    for (const [prn, trail] of Object.entries(satTrails)) {
+      if (trail.length < 2) continue;
+      const color = SYS_COLOR[trail[trail.length - 1].system] || '#c8d6e0';
+      ctx.save();
+      ctx.strokeStyle = color + '55';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      trail.forEach((pt, i) => {
+        const azRad = (pt.az - 90) * Math.PI / 180;
+        const dist  = (90 - pt.el) / 90;
+        const x = cx + dist * R * Math.cos(azRad);
+        const y = cy + dist * R * Math.sin(azRad);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 
   // Satellites
   const sats = Object.values(gps.satellites)
@@ -2303,6 +2349,7 @@ function render() {
   updateLegend();
   updateSatTable();
   updateRaw();
+  updateSatTrails();
   pushDopHistory();
   drawDopGraph();
 }
@@ -2633,6 +2680,10 @@ function toggleMap() {
 
 document.getElementById('btn-map').addEventListener('click', toggleMap);
 document.getElementById('btn-dop').addEventListener('click', toggleDopPanel);
+document.getElementById('btn-sat-trails').addEventListener('click', () => {
+  satTrailsVisible = !satTrailsVisible;
+  document.getElementById('btn-sat-trails').classList.toggle('active', satTrailsVisible);
+});
 
 document.getElementById('btn-follow').addEventListener('click', () => {
   mapFollow = !mapFollow;
