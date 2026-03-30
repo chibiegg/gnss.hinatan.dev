@@ -838,6 +838,18 @@ body.raw-resizing {
 #teseo-overlay .status-val.bad { color: var(--t-bad); }
 #teseo-overlay .status-val.warn { color: var(--t-warn); }
 
+#teseo-overlay .constellation-warning {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--t-bad);
+  background: rgba(255,80,80,0.08);
+  color: var(--t-bad);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 #teseo-overlay .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1255,6 +1267,7 @@ body.raw-resizing {
           <section id="teseo-tab-constellations" class="panel">
             <h2>GNSS Constellations</h2>
             <div id="teseo-constellations-grid" class="grid"></div>
+            <div id="teseo-constellation-warning" class="constellation-warning hidden"></div>
             <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
               Allowed combos: GPS+GAL+QZSS+GLO / GPS+GAL+QZSS+BDS / GLO+BDS
             </div>

@@ -197,6 +197,7 @@
       cfgFix: qs('#teseo-cfg-fix', '#cfg-fix'),
       cfgMask: qs('#teseo-cfg-mask', '#cfg-mask'),
       constellationsGrid: qs('#teseo-constellations-grid', '#constellations-grid'),
+      constellationWarning: qs('#teseo-constellation-warning'),
       sbasGrid: qs('#teseo-sbas-grid', '#sbas-grid'),
       nmeaGrid: qs('#teseo-nmea-grid', '#nmea-grid'),
       featuresGrid: qs('#teseo-features-grid', '#features-grid'),
@@ -426,6 +427,12 @@
         if (teseoPending.has(tc) || teseoPending.has(pc)) item.classList.add('pending');
         ui.constellationsGrid.appendChild(item);
       });
+
+      if (ui.constellationWarning) {
+        const err = checkConstellationConstraints();
+        ui.constellationWarning.textContent = err ? `⚠️ ${err}` : '';
+        ui.constellationWarning.classList.toggle('hidden', !err);
+      }
     }
 
     function renderSbas() {
@@ -790,10 +797,8 @@
         return;
       }
 
-      const constraintError = checkConstellationConstraints();
-      if (constraintError) {
-        setStatus('無効なコンステレーション組み合わせ', 'bad');
-        alert(`⚠️ 書き込みを中止しました\n\n${constraintError}`);
+      if (checkConstellationConstraints()) {
+        setStatus('無効なコンステレーション組み合わせ — 書き込みを中止', 'bad');
         return;
       }
 
