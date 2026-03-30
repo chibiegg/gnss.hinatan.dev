@@ -2367,6 +2367,12 @@ function initMap() {
     opacity: 0.7,
     smoothFactor: 1,
   }).addTo(leafletMap);
+
+  // Disable follow when user drags the map
+  leafletMap.on('dragstart', () => {
+    mapFollow = false;
+    document.getElementById('btn-follow').classList.remove('active');
+  });
 }
 
 function updateMap() {
