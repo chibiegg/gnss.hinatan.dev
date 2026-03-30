@@ -73,24 +73,20 @@
 /* Custom GPS marker */
 .gps-marker-outer {
   width: 18px; height: 18px;
-  border: 2px solid #3de87a;
-  border-radius: 50%;
-  background: rgba(61,232,122,0.2);
-  box-shadow: 0 0 10px rgba(61,232,122,0.5);
-  animation: marker-pulse 2s ease-in-out infinite;
 }
 .gps-marker-inner {
-  width: 7px; height: 7px;
+  width: 9px; height: 9px;
   background: #3de87a;
   border-radius: 50%;
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 6px #3de87a;
+  box-shadow: 0 0 8px #3de87a;
+  animation: marker-pulse 2s ease-in-out infinite;
 }
 @keyframes marker-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(61,232,122,0.5); }
-  50%       { box-shadow: 0 0 20px rgba(61,232,122,0.9); }
+  0%, 100% { box-shadow: 0 0 6px rgba(61,232,122,0.7); }
+  50%       { box-shadow: 0 0 14px rgba(61,232,122,1.0); }
 }
 </style>
 <style>
@@ -2318,6 +2314,7 @@ let currentTileLayer = null;
 let currentLayerKey  = 'dark';
 let sbasLayerGroup  = null;
 let sbasVisible     = false;
+let accuracyCircle  = null;
 
 const TRACK_MAX = 2000;
 
@@ -2426,6 +2423,16 @@ function initMap() {
     smoothFactor: 1,
   }).addTo(leafletMap);
 
+  // Accuracy circle (HDOP-based estimated horizontal error)
+  accuracyCircle = L.circle([35.6895, 139.6917], {
+    radius:      0,
+    color:       '#2dd4e8',
+    fillColor:   '#2dd4e8',
+    fillOpacity: 0.08,
+    weight:      1,
+    opacity:     0.5,
+  });
+
   // Disable follow when user drags the map
   leafletMap.on('dragstart', () => {
     mapFollow = false;
@@ -2459,6 +2466,19 @@ function updateMap() {
   // Move marker
   if (!leafletMap.hasLayer(gpsMarker)) gpsMarker.addTo(leafletMap);
   gpsMarker.setLatLng(latlng);
+
+  // Accuracy circle: radius = HDOP × 5 m (L1 single-frequency estimate)
+  if (accuracyCircle && gps.hdop !== null && gps.hdop > 0) {
+    const radius = gps.hdop * 5;
+    accuracyCircle.setLatLng(latlng);
+    accuracyCircle.setRadius(radius);
+    accuracyCircle.setTooltipContent(`HDOP ${gps.hdop.toFixed(1)} — 推定誤差 ±${radius.toFixed(0)} m`);
+    if (!leafletMap.hasLayer(accuracyCircle)) {
+      accuracyCircle.addTo(leafletMap).bindTooltip('', { permanent: false, sticky: true });
+    }
+  } else if (accuracyCircle && leafletMap.hasLayer(accuracyCircle)) {
+    accuracyCircle.remove();
+  }
 
   // Append to track
   trackPoints.push(latlng);
