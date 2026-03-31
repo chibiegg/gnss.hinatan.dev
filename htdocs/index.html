@@ -11,11 +11,35 @@
   flex-shrink: 0;
   width: 420px;
   display: none;
-  flex-direction: column;
+  flex-direction: row;
   background: var(--bg2);
   border-left: 1px solid var(--border);
 }
 #map-panel.visible { display: flex; }
+
+#map-resizer {
+  flex-shrink: 0;
+  width: 6px;
+  cursor: ew-resize;
+  touch-action: none;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  transition: background 0.15s;
+}
+#map-resizer:hover { background: var(--bg4); }
+
+body.map-resizing {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+#map-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
 
 #map-panel .panel-hdr { justify-content: space-between; }
 
@@ -665,6 +689,432 @@ body.raw-resizing {
 .n-cs       { color: var(--dim2); }
 .n-info     { color: var(--yellow); font-style: italic; }
 
+/* ─── Recorder Overlay ──────────────────────────────────────────────────────── */
+#recorder-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+}
+#recorder-overlay.visible { display: block; }
+
+#recorder-overlay .rec-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+}
+
+#recorder-overlay .rec-panel {
+  position: absolute;
+  inset: 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#recorder-overlay .rec-hdr {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 44px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #0d1a28 0%, var(--bg3) 100%);
+}
+
+#recorder-overlay .rec-title {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--red);
+  font-weight: bold;
+}
+
+#recorder-overlay .rec-hdr .btn { font-family: var(--font); }
+
+/* Tabs */
+#recorder-overlay .rec-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px;
+  height: 44px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+#recorder-overlay .rec-tab-btn {
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--dim);
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+#recorder-overlay .rec-tab-btn.active { color: var(--text); border-color: var(--cyan); }
+#recorder-overlay .rec-tab-btn:hover  { color: var(--text); border-color: var(--dim); }
+
+/* Tab body */
+#recorder-overlay .rec-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.rec-tab-pane { display: none; flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+.rec-tab-pane.active { display: flex; flex-direction: column; gap: 8px; }
+
+/* Record tab */
+.rec-status-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.rec-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dim2);
+  flex-shrink: 0;
+}
+.rec-status-dot.idle        { background: var(--dim2); }
+.rec-status-dot.recording   { background: var(--red); box-shadow: 0 0 8px var(--red); animation: blink 1.2s ease-in-out infinite; }
+.rec-status-dot.stopped     { background: var(--dim); }
+.rec-status-dot.interrupted { background: var(--yellow); }
+
+.rec-status-label {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.rec-status-label.idle        { color: var(--dim); }
+.rec-status-label.recording   { color: var(--red); }
+.rec-status-label.stopped     { color: var(--dim); }
+.rec-status-label.interrupted { color: var(--yellow); }
+
+.rec-session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--dim);
+  margin-left: auto;
+  text-align: right;
+}
+.rec-session-info strong { color: var(--text); font-size: 11px; }
+
+.rec-btn-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#btn-rec-start {
+  flex: 1;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(240,72,64,0.12);
+}
+#btn-rec-start:hover { background: rgba(240,72,64,0.25); box-shadow: 0 0 10px rgba(240,72,64,0.25); }
+
+#btn-rec-stop {
+  flex: 1;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--red);
+  border-color: rgba(240,72,64,0.5);
+  background: rgba(240,72,64,0.08);
+}
+#btn-rec-stop:hover { background: rgba(240,72,64,0.2); box-shadow: 0 0 10px rgba(240,72,64,0.2); }
+
+#rec-btn-close {
+  color: var(--dim);
+  border-color: var(--border2);
+}
+#rec-btn-close:hover { color: var(--text); border-color: var(--dim); }
+
+.rec-notice {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--yellow);
+  background: rgba(240,192,64,0.06);
+  color: var(--yellow);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.rec-stats-row {
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--dim);
+  padding: 2px 0;
+}
+.rec-stats-row span { color: var(--text); }
+
+/* Sessions tab */
+.rec-session-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.rec-session-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg3);
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+.rec-session-table tbody tr {
+  border-bottom: 1px solid rgba(33,48,61,0.5);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.rec-session-table tbody tr:hover  { background: rgba(45,212,232,0.04); }
+.rec-session-table tbody tr.active { background: rgba(45,212,232,0.08); }
+.rec-session-table tbody td {
+  padding: 5px 10px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.rec-status-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.rec-status-badge.recording   { background: var(--red);    color: #fff; }
+.rec-status-badge.stopped     { background: var(--bg3);    color: var(--dim);    border: 1px solid var(--border2); }
+.rec-status-badge.interrupted { background: rgba(240,192,64,0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+
+.rec-action-btn {
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.rec-action-btn:hover { color: var(--text); border-color: var(--dim); }
+.rec-action-btn.dl    { color: var(--cyan);   border-color: var(--cyan-dim); }
+.rec-action-btn.dl:hover { border-color: var(--cyan); }
+.rec-action-btn.map   { color: var(--green);  border-color: var(--green-dim); }
+.rec-action-btn.map:hover { border-color: var(--green); }
+.rec-action-btn.del   { color: var(--red);    border-color: rgba(240,72,64,0.4); }
+.rec-action-btn.del:hover { border-color: var(--red); }
+
+/* Session detail / map pane */
+#rec-session-detail {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+  padding: 10px 16px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+#rec-session-map-wrap {
+  flex-shrink: 0;
+  height: 280px;
+  border-top: 1px solid var(--border);
+  position: relative;
+  display: none;
+  flex-direction: column;
+}
+#rec-session-map-wrap.visible { display: flex; }
+
+#rec-map-resizer {
+  flex-shrink: 0;
+  height: 6px;
+  cursor: ns-resize;
+  touch-action: none;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+#rec-map-resizer:hover { background: var(--bg4); }
+
+body.rec-map-resizing {
+  cursor: ns-resize;
+  user-select: none;
+}
+
+#rec-session-map { flex: 1; min-height: 0; }
+
+/* レイヤー切り替えボタン群 (地図右上に重ねて表示) */
+#rec-map-layer-btns {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  gap: 4px;
+}
+.rec-layer-btn {
+  padding: 3px 9px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: rgba(13,17,23,0.82);
+  color: var(--dim);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.rec-layer-btn:hover  { color: var(--text); border-color: var(--dim); }
+.rec-layer-btn.active { color: var(--cyan); border-color: var(--cyan); background: rgba(45,212,232,0.10); }
+
+/* Leaflet popup — dark theme for rec map */
+#rec-session-map .leaflet-popup-content-wrapper {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  padding: 0;
+}
+#rec-session-map .leaflet-popup-content {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 11px;
+  line-height: 1.7;
+}
+#rec-session-map .leaflet-popup-tip {
+  background: var(--border2);
+}
+#rec-session-map .leaflet-popup-close-button {
+  color: var(--dim) !important;
+  font-size: 16px !important;
+  top: 4px !important;
+  right: 6px !important;
+}
+#rec-session-map .leaflet-popup-close-button:hover { color: var(--text) !important; }
+
+.rec-popup {
+  padding: 8px 12px;
+  min-width: 180px;
+}
+.rec-popup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rec-popup-key {
+  color: var(--dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.rec-popup-val {
+  color: var(--cyan);
+  font-weight: bold;
+  text-align: right;
+}
+
+.rec-map-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+  font-size: 12px;
+  background: var(--bg3);
+  pointer-events: none;
+}
+
+/* REC indicator in statusbar */
+#rec-indicator {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: var(--red);
+  padding: 2px 8px;
+  border: 1px solid var(--red);
+  border-radius: 3px;
+  background: rgba(240,72,64,0.08);
+}
+#rec-indicator.visible { display: flex; }
+#rec-indicator .rec-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+#btn-rec-toggle {
+  color: var(--red);
+  border-color: var(--red);
+}
+#btn-rec-toggle:hover { background: rgba(240,72,64,0.1); }
+#btn-rec-toggle.recording {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(240,72,64,0.18);
+  box-shadow: 0 0 8px rgba(240,72,64,0.25);
+  animation: blink-btn 1.2s ease-in-out infinite;
+}
+@keyframes blink-btn {
+  0%, 100% { box-shadow: 0 0 6px rgba(240,72,64,0.2); }
+  50%       { box-shadow: 0 0 14px rgba(240,72,64,0.45); }
+}
+
+#btn-rec {
+  color: var(--dim);
+  border-color: var(--border2);
+}
+#btn-rec:hover { color: var(--text); border-color: var(--dim); }
+
+/* Rec sessions list scroll area */
+#rec-sessions-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* ─── Teseo Overlay (Integrated) ───────────────────────────────────────────── */
 #teseo-overlay {
   position: fixed;
@@ -1079,6 +1529,8 @@ body.raw-resizing {
     <button class="btn" id="btn-map">Map</button>
     <button class="btn" id="btn-dop">DOP</button>
     <button class="btn" id="btn-reset">Reset</button>
+    <button class="btn" id="btn-rec-toggle">&#9679; REC</button>
+    <button class="btn" id="btn-rec">Sessions</button>
     <button class="btn" id="btn-teseo">TESEO</button>
   </div>
 </div>
@@ -1103,6 +1555,7 @@ body.raw-resizing {
     <span class="stat-val" id="st-rmc" style="color:var(--dim)">Void</span>
   </div>
   <div class="stat-cell">
+    <div id="rec-indicator"><div class="rec-dot"></div>REC</div>
     <span id="stale-badge">STALE</span>
   </div>
 </div>
@@ -1202,6 +1655,8 @@ body.raw-resizing {
 
     <!-- Map Panel -->
     <div id="map-panel">
+      <div id="map-resizer" title="ドラッグで幅を変更"></div>
+      <div id="map-inner">
       <div class="panel-hdr">
         <span><span class="panel-hdr-icon">&#9974;</span> Map</span>
         <div class="map-hdr-controls">
@@ -1218,6 +1673,7 @@ body.raw-resizing {
         <span class="map-layer-sep"></span>
         <button class="map-mini-btn" id="btn-sbas-overlay">SBAS Areas</button>
       </div>
+      </div><!-- /#map-inner -->
     </div>
 
   </div>
@@ -1246,6 +1702,95 @@ body.raw-resizing {
     </div>
     <div id="raw-scroll">
       <div id="raw-log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Recorder Overlay ──────────────────────────────────────────────────── -->
+<div id="recorder-overlay" aria-hidden="true">
+  <div class="rec-backdrop" id="rec-backdrop"></div>
+  <div class="rec-panel" role="dialog" aria-modal="true" aria-label="NMEA Recorder">
+
+    <div class="rec-hdr">
+      <div class="rec-title">&#9679; NMEA Recorder</div>
+      <div class="controls">
+        <button class="btn" id="rec-btn-close">Close</button>
+      </div>
+    </div>
+
+    <div class="rec-tabs">
+      <button class="rec-tab-btn active" data-rectab="record">Record</button>
+      <button class="rec-tab-btn" data-rectab="sessions">Sessions</button>
+    </div>
+
+    <div class="rec-body">
+
+      <!-- ── Record Tab ── -->
+      <div class="rec-tab-pane active" id="rec-tab-record">
+        <div class="rec-status-card">
+          <div class="rec-status-dot idle" id="rec-dot"></div>
+          <div class="rec-status-label idle" id="rec-status-label">IDLE</div>
+          <div class="rec-session-info" id="rec-session-info" style="display:none">
+            <strong id="rec-session-name">—</strong>
+            <span>開始: <span id="rec-session-start">—</span></span>
+            <span>経過: <span id="rec-session-elapsed">—</span></span>
+          </div>
+        </div>
+
+        <div class="rec-stats-row" id="rec-stats-row" style="display:none">
+          <div>Chunks: <span id="rec-stat-chunks">0</span></div>
+          <div>Lines: <span id="rec-stat-lines">0</span></div>
+          <div>Buffer: <span id="rec-stat-buf">0</span> lines</div>
+        </div>
+
+        <div class="rec-btn-row">
+          <button class="btn" id="btn-rec-start">&#9679; 記録開始</button>
+          <button class="btn" id="btn-rec-stop" style="display:none">&#9632; 記録停止</button>
+        </div>
+
+        <div class="rec-notice" id="rec-notice-interrupted" style="display:none">
+          &#9888; 前回正常終了しなかった記録が残っています。「Sessions」タブで確認してください。
+        </div>
+      </div>
+
+      <!-- ── Sessions Tab ── -->
+      <div class="rec-tab-pane" id="rec-tab-sessions" style="padding:0;gap:0;">
+        <div id="rec-sessions-scroll" style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px;">
+          <table class="rec-session-table">
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>開始</th>
+                <th>終了</th>
+                <th>状態</th>
+                <th>Lines</th>
+                <th>Size</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rec-session-tbody">
+              <tr><td colspan="7" style="text-align:center;color:var(--dim);padding:20px">記録がありません</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="rec-session-detail" style="display:none">
+          選択中: <strong id="rec-detail-name">—</strong>
+          <span style="margin-left:12px">Points: <span id="rec-detail-pts">—</span></span>
+        </div>
+
+        <div id="rec-session-map-wrap">
+          <div id="rec-map-resizer" title="ドラッグで高さを変更"></div>
+          <div id="rec-session-map"></div>
+          <div id="rec-map-layer-btns">
+            <button class="rec-layer-btn active" data-reclayer="dark">Dark</button>
+            <button class="rec-layer-btn" data-reclayer="light">Light</button>
+            <button class="rec-layer-btn" data-reclayer="satellite">Satellite</button>
+          </div>
+          <div class="rec-map-empty" id="rec-map-empty" style="display:none">座標データがありません</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1369,6 +1914,7 @@ body.raw-resizing {
 </div>
 
 <script src="./serial-session.js"></script>
+<script src="./nmea-recorder.js"></script>
 <script src="./teseo-tool.js"></script>
 <script>
 'use strict';
@@ -2401,6 +2947,57 @@ document.getElementById('btn-raw-copy').addEventListener('click', async () => {
   setTimeout(() => { btn.textContent = prev; }, 1200);
 });
 
+// ── Map Panel Width Resizer ──────────────────────────────────────────────────
+
+(function initMapResizer() {
+  const mapPanel = document.getElementById('map-panel');
+  const handle   = document.getElementById('map-resizer');
+  if (!mapPanel || !handle) return;
+
+  const MIN_W = 200;
+
+  let startX = 0;
+  let startW = 0;
+  let active = false;
+
+  function clampWidth(w) {
+    const maxW = Math.max(MIN_W, Math.floor(window.innerWidth * 0.75));
+    return Math.min(maxW, Math.max(MIN_W, Math.floor(w)));
+  }
+
+  function onMove(e) {
+    if (!active) return;
+    // Handle is on the left edge; dragging left widens the panel.
+    const dx = e.clientX - startX;
+    const nextW = clampWidth(startW - dx);
+    mapPanel.style.width = `${nextW}px`;
+    if (typeof leafletMap !== 'undefined' && leafletMap) leafletMap.invalidateSize();
+  }
+
+  function stop(e) {
+    if (!active) return;
+    active = false;
+    try { handle.releasePointerCapture(e.pointerId); } catch {}
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup',   stop);
+    window.removeEventListener('pointercancel', stop);
+    document.body.classList.remove('map-resizing');
+  }
+
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    active  = true;
+    startX  = e.clientX;
+    startW  = mapPanel.getBoundingClientRect().width;
+    document.body.classList.add('map-resizing');
+    handle.setPointerCapture(e.pointerId);
+    window.addEventListener('pointermove',   onMove);
+    window.addEventListener('pointerup',     stop);
+    window.addEventListener('pointercancel', stop);
+    e.preventDefault();
+  });
+})();
+
 // ── Raw NMEA Panel Resizer ───────────────────────────────────────────────────
 
 (function initRawResizer() {
@@ -2621,6 +3218,12 @@ function initMap() {
     });
     sbasLayerGroup.addLayer(poly);
   });
+
+  // マップコンテナのサイズ変化（rawパネルリサイズ・ウィンドウリサイズなど）を
+  // 検知して Leaflet に通知する。これがないと地図が正しく再描画されない。
+  new ResizeObserver(() => leafletMap.invalidateSize()).observe(
+    document.getElementById('map-container')
+  );
 }
 
 function updateMap() {
@@ -2728,6 +3331,567 @@ document.getElementById('btn-sbas-overlay').addEventListener('click', () => {
 
 // Start unified render loop (Leaflet is now loaded)
 setInterval(function() { render(); updateMap(); }, 500);
+</script>
+
+<script>
+'use strict';
+// ── NMEA Recorder UI ─────────────────────────────────────────────────────────
+
+(function() {
+
+  // ── State ──────────────────────────────────────────────────────────────────
+
+  let recState       = 'idle';   // idle | recording | stopped
+  let currentSession = null;     // session object while recording
+  let lineBuffer     = [];       // lines accumulated in the current 1-sec window
+  let recLockRelease = null;     // Web Locks API のロック解放関数
+  let bufChunkStart  = Date.now();
+  let flushTimer     = null;
+  let elapsedTimer   = null;
+  let chunkCount     = 0;
+  let lineCount      = 0;
+
+  // Session map state
+  let recMap         = null;
+  let recTrack       = null;
+  let recMapSession  = null;   // sessionId currently shown on map
+  let recPoints      = [];     // current session's coordinate points
+
+  // ── Hook into NMEA feed ────────────────────────────────────────────────────
+
+  // Intercept each raw NMEA line before it reaches the main feedNMEA.
+  // We wrap session.onLine to also push into lineBuffer when recording.
+  session.onLine((line) => {
+    if (recState === 'recording') {
+      lineBuffer.push(line.trim());
+    }
+  });
+
+  // ── Flush logic ───────────────────────────────────────────────────────────
+
+  /** Flush the current lineBuffer to IndexedDB as a single chunk. */
+  async function flushBuffer() {
+    if (!currentSession || !lineBuffer.length) {
+      lineBuffer    = [];
+      bufChunkStart = Date.now();
+      return;
+    }
+    const lines = lineBuffer.slice();
+    lineBuffer   = [];
+    const endNow = Date.now();
+    try {
+      await NMEARecorder.saveChunk(currentSession.sessionId, lines, bufChunkStart, endNow);
+      chunkCount++;
+      lineCount += lines.length;
+    } catch (e) {
+      console.warn('[Recorder] saveChunk error:', e);
+    }
+    bufChunkStart = endNow;
+    updateRecStats();
+  }
+
+  /** Start the 1-second periodic flush timer. */
+  function startFlushTimer() {
+    bufChunkStart = Date.now();
+    flushTimer = setInterval(flushBuffer, 1000);
+  }
+
+  /** Stop the timer and flush remaining buffer. */
+  async function stopFlushTimer() {
+    if (flushTimer) { clearInterval(flushTimer); flushTimer = null; }
+    await flushBuffer();
+  }
+
+  // ── Recording controls ─────────────────────────────────────────────────────
+
+  async function startRecording() {
+    if (recState === 'recording') return;
+    lineBuffer     = [];
+    chunkCount     = 0;
+    lineCount      = 0;
+    currentSession = await NMEARecorder.createSession();
+    recState = 'recording';
+
+    // セッションIDに紐づいたロックを取得し、タブが生きている間保持する。
+    // 他タブの recoverInterruptedSessions がこのロックを確認して
+    // INTERRUPTED への誤マークを防ぐ。
+    if (navigator.locks) {
+      const lockName = 'gnss_rec_' + currentSession.sessionId;
+      new Promise(resolve => {
+        recLockRelease = resolve;
+        navigator.locks.request(lockName, () => new Promise(r => { recLockRelease = r; }));
+      }).catch(() => {});
+    }
+
+    startFlushTimer();
+    setRecUI('recording');
+    document.getElementById('rec-indicator').classList.add('visible');
+    startElapsedTimer();
+  }
+
+  async function stopRecording() {
+    if (recState !== 'recording') return;
+    recState = 'stopped';
+    await stopFlushTimer();
+    await NMEARecorder.stopSession(currentSession.sessionId);
+
+    // ロックを解放
+    if (recLockRelease) { recLockRelease(); recLockRelease = null; }
+
+    stopElapsedTimer();
+    document.getElementById('rec-indicator').classList.remove('visible');
+    setRecUI('stopped');
+    currentSession = null;
+    // Refresh session list if sessions tab is open
+    if (document.getElementById('rec-tab-sessions').classList.contains('active')) {
+      await refreshSessionList();
+    }
+  }
+
+  // ── Elapsed timer ─────────────────────────────────────────────────────────
+
+  function startElapsedTimer() {
+    const startMs = Date.now();
+    elapsedTimer = setInterval(() => {
+      const s = Math.floor((Date.now() - startMs) / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      const el = document.getElementById('rec-session-elapsed');
+      if (el) el.textContent = `${mm}:${ss}`;
+    }, 1000);
+  }
+
+  function stopElapsedTimer() {
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  }
+
+  // ── UI state management ───────────────────────────────────────────────────
+
+  function setRecUI(state) {
+    const dot      = document.getElementById('rec-dot');
+    const lbl      = document.getElementById('rec-status-label');
+    const info     = document.getElementById('rec-session-info');
+    const stats    = document.getElementById('rec-stats-row');
+    const btnStart = document.getElementById('btn-rec-start');
+    const btnStop  = document.getElementById('btn-rec-stop');
+    const toggle   = document.getElementById('btn-rec-toggle');
+
+    // Reset all state classes
+    dot.className = 'rec-status-dot ' + state;
+    lbl.className = 'rec-status-label ' + state;
+
+    if (state === 'recording') {
+      lbl.textContent  = 'RECORDING';
+      btnStart.style.display = 'none';
+      btnStop.style.display  = '';
+      info.style.display  = 'flex';
+      stats.style.display = 'flex';
+      if (currentSession) {
+        document.getElementById('rec-session-name').textContent  = currentSession.displayName;
+        document.getElementById('rec-session-start').textContent = new Date(currentSession.startedAt).toLocaleTimeString('ja-JP');
+      }
+      toggle.innerHTML = '&#9632; STOP';
+      toggle.classList.add('recording');
+    } else if (state === 'stopped') {
+      lbl.textContent  = 'STOPPED';
+      btnStart.style.display = '';
+      btnStop.style.display  = 'none';
+      info.style.display  = 'none';
+      stats.style.display = 'none';
+      toggle.innerHTML = '&#9679; REC';
+      toggle.classList.remove('recording');
+    } else {
+      lbl.textContent  = 'IDLE';
+      btnStart.style.display = '';
+      btnStop.style.display  = 'none';
+      info.style.display  = 'none';
+      stats.style.display = 'none';
+      toggle.innerHTML = '&#9679; REC';
+      toggle.classList.remove('recording');
+    }
+  }
+
+  function updateRecStats() {
+    const elC = document.getElementById('rec-stat-chunks');
+    const elL = document.getElementById('rec-stat-lines');
+    const elB = document.getElementById('rec-stat-buf');
+    if (elC) elC.textContent = chunkCount;
+    if (elL) elL.textContent = lineCount;
+    if (elB) elB.textContent = lineBuffer.length;
+  }
+
+  // Periodically refresh buffer count while recording
+  setInterval(() => {
+    if (recState === 'recording') updateRecStats();
+  }, 500);
+
+  // ── Session list ──────────────────────────────────────────────────────────
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function refreshSessionList() {
+    const tbody   = document.getElementById('rec-session-tbody');
+    const sessions = await NMEARecorder.listSessions();
+
+    if (!sessions.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--dim);padding:20px">記録がありません</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = sessions.map(s => {
+      const badgeCls = s.status === 'recording'   ? 'recording'
+                     : s.status === 'interrupted' ? 'interrupted'
+                     : 'stopped';
+      const badge = `<span class="rec-status-badge ${badgeCls}">${s.status.toUpperCase()}</span>`;
+      return `<tr data-sid="${esc(s.sessionId)}">
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(s.displayName)}</td>
+        <td>${fmtDate(s.startedAt)}</td>
+        <td>${fmtDate(s.endedAt)}</td>
+        <td>${badge}</td>
+        <td style="text-align:right;color:var(--dim)">${s.totalLines.toLocaleString()}</td>
+        <td style="text-align:right;color:var(--dim)">${fmtSize(s.totalBytes)}</td>
+        <td style="white-space:nowrap">
+          <button class="rec-action-btn dl"  data-action="dl"  data-sid="${esc(s.sessionId)}">DL</button>
+          <button class="rec-action-btn map" data-action="map" data-sid="${esc(s.sessionId)}">Map</button>
+          <button class="rec-action-btn del" data-action="del" data-sid="${esc(s.sessionId)}">Del</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Row / button click handlers
+    tbody.querySelectorAll('tr[data-sid]').forEach(tr => {
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;  // handled below
+        tbody.querySelectorAll('tr').forEach(r => r.classList.remove('active'));
+        tr.classList.add('active');
+      });
+    });
+
+    tbody.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const sid    = btn.dataset.sid;
+        const action = btn.dataset.action;
+        const sessions2 = await NMEARecorder.listSessions();
+        const session   = sessions2.find(s => s.sessionId === sid);
+        if (!session) return;
+
+        if (action === 'dl') {
+          btn.textContent = '...';
+          btn.disabled = true;
+          try { await NMEARecorder.downloadSession(session); }
+          finally { btn.textContent = 'DL'; btn.disabled = false; }
+
+        } else if (action === 'map') {
+          await showSessionOnMap(session);
+
+        } else if (action === 'del') {
+          if (!confirm(`「${session.displayName}」を削除しますか？\n(チャンク含む全データが削除されます)`)) return;
+          await NMEARecorder.deleteSession(sid);
+          if (recMapSession === sid) hideSessionMap();
+          await refreshSessionList();
+        }
+      });
+    });
+  }
+
+  // ── Session map ───────────────────────────────────────────────────────────
+
+  /** NMEA時刻文字列 "HHMMSS.ss" → "HH:MM:SS UTC" */
+  function fmtNmeaTime(t) {
+    if (!t || t.length < 6) return t || '—';
+    return `${t.slice(0,2)}:${t.slice(2,4)}:${t.slice(4,6)} UTC`;
+  }
+
+  /** クリック位置に最も近い点を返す (lat/lon 二乗距離) */
+  function nearestPoint(pts, latlng) {
+    let best = null, bestD = Infinity;
+    for (const p of pts) {
+      const d = (p.lat - latlng.lat) ** 2 + (p.lon - latlng.lng) ** 2;
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    return best;
+  }
+
+  /** 十進度を度分秒文字列に変換 */
+  function fmtDMS(deg, posDir, negDir) {
+    const dir = deg >= 0 ? posDir : negDir;
+    const abs = Math.abs(deg);
+    const d   = Math.floor(abs);
+    const mf  = (abs - d) * 60;
+    const m   = Math.floor(mf);
+    const s   = ((mf - m) * 60).toFixed(2);
+    return `${d}°${String(m).padStart(2,'0')}'${s.padStart(5,'0')}"${dir}`;
+  }
+
+  const REC_TILE_LAYERS = {
+    dark: {
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      options: { attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19 },
+    },
+    light: {
+      url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      options: { attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19 },
+    },
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      options: { attribution: '&copy; Esri', maxZoom: 19 },
+    },
+  };
+
+  let recCurrentTileLayer = null;
+  let recCurrentLayerKey  = 'dark';
+
+  /** recMap のタイルレイヤーを切り替える */
+  function switchRecLayer(key) {
+    if (!recMap || !REC_TILE_LAYERS[key]) return;
+    if (recCurrentTileLayer) recMap.removeLayer(recCurrentTileLayer);
+    recCurrentTileLayer = L.tileLayer(REC_TILE_LAYERS[key].url, REC_TILE_LAYERS[key].options).addTo(recMap);
+    if (recTrack) recTrack.bringToFront();
+    recCurrentLayerKey = key;
+    document.querySelectorAll('.rec-layer-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.reclayer === key);
+    });
+  }
+
+  // レイヤーボタンのクリック
+  document.querySelectorAll('.rec-layer-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchRecLayer(btn.dataset.reclayer));
+  });
+
+  function ensureRecMap() {
+    if (recMap) return;
+    recMap = L.map('rec-session-map', { zoomControl: true, attributionControl: true })
+               .setView([35.6895, 139.6917], 13);
+    recCurrentTileLayer = L.tileLayer(REC_TILE_LAYERS.dark.url, REC_TILE_LAYERS.dark.options).addTo(recMap);
+
+    recTrack = L.polyline([], { color: '#3de87a', weight: 3, opacity: 0.85 }).addTo(recMap);
+
+    // クリックで最近傍点の情報をポップアップ表示
+    recTrack.on('click', (e) => {
+      const p = nearestPoint(recPoints, e.latlng);
+      if (!p) return;
+      L.popup({ maxWidth: 260 })
+        .setLatLng([p.lat, p.lon])
+        .setContent(`
+          <div class="rec-popup">
+            <div class="rec-popup-row">
+              <span class="rec-popup-key">Time</span>
+              <span class="rec-popup-val">${fmtNmeaTime(p.time)}</span>
+            </div>
+            <div class="rec-popup-row">
+              <span class="rec-popup-key">Lat</span>
+              <span class="rec-popup-val">${fmtDMS(p.lat, 'N', 'S')}</span>
+            </div>
+            <div class="rec-popup-row">
+              <span class="rec-popup-key">Lon</span>
+              <span class="rec-popup-val">${fmtDMS(p.lon, 'E', 'W')}</span>
+            </div>
+            <div class="rec-popup-row" style="margin-top:2px;border-top:1px solid var(--border);padding-top:4px">
+              <span class="rec-popup-key">Decimal</span>
+              <span class="rec-popup-val" style="color:var(--dim)">${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</span>
+            </div>
+          </div>`)
+        .openOn(recMap);
+      L.DomEvent.stopPropagation(e);
+    });
+  }
+
+  async function showSessionOnMap(session) {
+    const wrap   = document.getElementById('rec-session-map-wrap');
+    const detail = document.getElementById('rec-session-detail');
+    const empty  = document.getElementById('rec-map-empty');
+
+    wrap.classList.add('visible');
+    detail.style.display = 'block';
+    document.getElementById('rec-detail-name').textContent = session.displayName;
+
+    ensureRecMap();
+    recMap.invalidateSize();
+
+    const points = await NMEARecorder.getSessionPoints(session.sessionId);
+    document.getElementById('rec-detail-pts').textContent = points.length;
+
+    recTrack.setLatLngs([]);
+    recPoints     = points;
+    recMapSession = session.sessionId;
+    recMap.closePopup();
+
+    if (!points.length) {
+      empty.style.display = 'flex';
+      return;
+    }
+    empty.style.display = 'none';
+
+    const latlngs = points.map(p => [p.lat, p.lon]);
+    recTrack.setLatLngs(latlngs);
+
+    // Add start/end markers
+    if (latlngs.length > 0) {
+      const startIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:10px;height:10px;background:#3de87a;border-radius:50%;box-shadow:0 0 6px #3de87a"></div>',
+        iconSize: [10, 10], iconAnchor: [5, 5],
+      });
+      L.marker(latlngs[0], { icon: startIcon }).addTo(recMap).bindTooltip('Start', { permanent: false });
+    }
+
+    recMap.fitBounds(recTrack.getBounds(), { padding: [20, 20] });
+  }
+
+  function hideSessionMap() {
+    document.getElementById('rec-session-map-wrap').classList.remove('visible');
+    document.getElementById('rec-session-detail').style.display = 'none';
+    recMapSession = null;
+    recPoints     = [];
+    if (recMap) recMap.closePopup();
+  }
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+
+  document.querySelectorAll('.rec-tab-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      document.querySelectorAll('.rec-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.rec-tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = document.getElementById('rec-tab-' + btn.dataset.rectab);
+      if (tab) tab.classList.add('active');
+      if (btn.dataset.rectab === 'sessions') {
+        await refreshSessionList();
+        // Fix map size after becoming visible
+        if (recMap) setTimeout(() => recMap.invalidateSize(), 100);
+      }
+    });
+  });
+
+  // ── Overlay open/close ────────────────────────────────────────────────────
+
+  function openRecorder() {
+    document.getElementById('recorder-overlay').classList.add('visible');
+    document.getElementById('recorder-overlay').setAttribute('aria-hidden', 'false');
+  }
+
+  function closeRecorder() {
+    document.getElementById('recorder-overlay').classList.remove('visible');
+    document.getElementById('recorder-overlay').setAttribute('aria-hidden', 'true');
+  }
+
+  // Sessions button: open modal directly to sessions tab
+  document.getElementById('btn-rec').addEventListener('click', () => {
+    document.querySelectorAll('.rec-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.rec-tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelector('.rec-tab-btn[data-rectab="sessions"]').classList.add('active');
+    document.getElementById('rec-tab-sessions').classList.add('active');
+    refreshSessionList();
+    openRecorder();
+  });
+  document.getElementById('rec-btn-close').addEventListener('click', closeRecorder);
+  document.getElementById('rec-backdrop').addEventListener('click', closeRecorder);
+
+  // ── REC toggle button (main screen) ──────────────────────────────────────
+
+  document.getElementById('btn-rec-toggle').addEventListener('click', async () => {
+    if (recState === 'recording') {
+      await stopRecording();
+    } else {
+      await startRecording();
+    }
+  });
+
+  // ── Record buttons (inside modal) ─────────────────────────────────────────
+
+  document.getElementById('btn-rec-start').addEventListener('click', startRecording);
+  document.getElementById('btn-rec-stop').addEventListener('click', async () => {
+    await stopRecording();
+  });
+
+  // ── On load: recover interrupted sessions ─────────────────────────────────
+
+  NMEARecorder.openDB().then(async () => {
+    const n = await NMEARecorder.recoverInterruptedSessions();
+    if (n > 0) {
+      document.getElementById('rec-notice-interrupted').style.display = 'block';
+    }
+  }).catch(e => console.warn('[Recorder] DB init error:', e));
+
+  // ── Keyboard: Escape closes overlay ──────────────────────────────────────
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('recorder-overlay').classList.contains('visible')) {
+        closeRecorder();
+      }
+    }
+  });
+
+  // ── beforeunload: flush remaining buffer ─────────────────────────────────
+  // (best-effort; 1-sec timer already handles most cases)
+  window.addEventListener('beforeunload', () => {
+    if (recState === 'recording' && lineBuffer.length && currentSession) {
+      // Synchronous IndexedDB is not possible here; the timer should have
+      // already flushed within the last second. Mark session interrupted.
+      // The next page load will recover it via recoverInterruptedSessions().
+    }
+  });
+
+  // ── Session map resizer ───────────────────────────────────────────────────
+
+  (function initRecMapResizer() {
+    const wrap   = document.getElementById('rec-session-map-wrap');
+    const handle = document.getElementById('rec-map-resizer');
+    const MIN_H  = 120;
+    const MAX_H  = () => Math.floor(window.innerHeight * 0.75);
+
+    let active = false;
+    let startY = 0;
+    let startH = 0;
+
+    function clamp(h) {
+      return Math.min(MAX_H(), Math.max(MIN_H, Math.floor(h)));
+    }
+
+    function onMove(e) {
+      if (!active) return;
+      // ハンドルはマップ上端にある。上にドラッグ → dy < 0 → 高さを増やす
+      const nextH = clamp(startH - (e.clientY - startY));
+      wrap.style.height = `${nextH}px`;
+      if (recMap) recMap.invalidateSize();
+    }
+
+    function onStop(e) {
+      if (!active) return;
+      active = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup',   onStop);
+      window.removeEventListener('pointercancel', onStop);
+      document.body.classList.remove('rec-map-resizing');
+    }
+
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      active  = true;
+      startY  = e.clientY;
+      startH  = wrap.getBoundingClientRect().height;
+      handle.setPointerCapture(e.pointerId);
+      document.body.classList.add('rec-map-resizing');
+      window.addEventListener('pointermove',   onMove);
+      window.addEventListener('pointerup',     onStop);
+      window.addEventListener('pointercancel', onStop);
+      e.preventDefault();
+    });
+  })();
+
+})();
 </script>
 </body>
 </html>
