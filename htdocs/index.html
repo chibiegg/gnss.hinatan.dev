@@ -2884,6 +2884,7 @@ function toggleDopPanel() {
   dopPanelVisible = !dopPanelVisible;
   document.getElementById('dop-panel').classList.toggle('visible', dopPanelVisible);
   document.getElementById('btn-dop').classList.toggle('active', dopPanelVisible);
+  localStorage.setItem('gnss_dop_visible', dopPanelVisible ? '1' : '0');
 }
 
 function render() {
@@ -3279,6 +3280,7 @@ function toggleMap() {
     panel.classList.remove('visible');
     btn.classList.remove('active');
   }
+  localStorage.setItem('gnss_map_visible', mapVisible ? '1' : '0');
 }
 
 document.getElementById('btn-map').addEventListener('click', toggleMap);
@@ -3328,6 +3330,10 @@ document.getElementById('btn-sbas-overlay').addEventListener('click', () => {
   const sel = document.getElementById('baud-sel');
   if ([...sel.options].some(o => o.value === savedBaud)) sel.value = savedBaud;
 })();
+
+// Restore panel visibility
+if (localStorage.getItem('gnss_map_visible') === '1') toggleMap();
+if (localStorage.getItem('gnss_dop_visible') === '1') toggleDopPanel();
 
 // Start unified render loop (Leaflet is now loaded)
 setInterval(function() { render(); updateMap(); }, 500);
