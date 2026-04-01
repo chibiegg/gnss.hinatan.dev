@@ -3557,7 +3557,9 @@ setInterval(function() { render(); updateMap(); }, 500);
       const badgeCls = s.status === 'recording'   ? 'recording'
                      : s.status === 'interrupted' ? 'interrupted'
                      : 'stopped';
-      const badge = `<span class="rec-status-badge ${badgeCls}">${s.status.toUpperCase()}</span>`;
+      const badge = s.status === 'interrupted'
+        ? `<button class="rec-status-badge interrupted" data-action="close" data-sid="${esc(s.sessionId)}" title="クリックしてクローズ" style="cursor:pointer;font:inherit;border:none;padding:2px 6px">INTERRUPTED</button>`
+        : `<span class="rec-status-badge ${badgeCls}">${s.status.toUpperCase()}</span>`;
       return `<tr data-sid="${esc(s.sessionId)}">
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(s.displayName)}</td>
         <td>${fmtDate(s.startedAt)}</td>
@@ -3599,6 +3601,11 @@ setInterval(function() { render(); updateMap(); }, 500);
 
         } else if (action === 'map') {
           await showSessionOnMap(session);
+
+        } else if (action === 'close') {
+          if (!confirm(`「${session.displayName}」のセッションの記録をクローズしますか？`)) return;
+          await NMEARecorder.stopSession(sid);
+          await refreshSessionList();
 
         } else if (action === 'del') {
           if (!confirm(`「${session.displayName}」を削除しますか？\n(チャンク含む全データが削除されます)`)) return;

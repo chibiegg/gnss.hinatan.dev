@@ -93,9 +93,36 @@
     return s;
   }
 
-  /** Mark a session as stopped. */
+  /** Mark a session as stopped, using the last chunk's endedAt (or startedAt if no chunks). */
   async function stopSession(sessionId) {
-    return updateSession(sessionId, { status: 'stopped', endedAt: Date.now() });
+    const db = await openDB();
+
+    // Find the last chunk's endedAt via the sessionId_startedAt index (reverse cursor)
+    const lastChunkEndedAt = await new Promise((res, rej) => {
+      const tx  = db.transaction('chunks', 'readonly');
+      const req = tx.objectStore('chunks')
+                    .index('sessionId_startedAt')
+                    .openCursor(
+                      IDBKeyRange.bound([sessionId, 0], [sessionId, Infinity]),
+                      'prev'
+                    );
+      req.onsuccess = (e) => {
+        const c = e.target.result;
+        res(c ? c.value.endedAt : null);
+      };
+      req.onerror = (e) => rej(e.target.error);
+    });
+
+    const tx = db.transaction('sessions', 'readwrite');
+    const st = tx.objectStore('sessions');
+    const s  = await req2p(st.get(sessionId));
+    if (!s) { await tx2p(tx); return null; }
+    s.status    = 'stopped';
+    s.endedAt   = lastChunkEndedAt ?? s.startedAt;
+    s.updatedAt = Date.now();
+    st.put(s);
+    await tx2p(tx);
+    return s;
   }
 
   /** Return all sessions sorted newest-first. */
