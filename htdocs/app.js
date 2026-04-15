@@ -102,7 +102,8 @@ function parseDate(d) {
 
 function systemFromTalker(talker, prn) {
   // Prefer explicit PRN ranges so mixed talkers still map correctly.
-  if (prn >= 183 && prn <= 197) return 'QZSS';
+  if (prn >= 193 && prn <= 202) return 'QZSS';   // Extended or normalized Strict
+  if (prn >= 183 && prn <= 192) return 'QZSS';   // older Extended range
   if (prn >= 141 && prn <= 172) return 'BeiDou';
   if (prn >= 301 && prn <= 330) return 'Galileo';
   if (prn >= 65  && prn <= 92)  return 'GLONASS';
@@ -116,10 +117,17 @@ function systemFromTalker(talker, prn) {
     if (prn >= 33  && prn <= 64)  return 'SBAS';
     if (prn >= 65  && prn <= 92)  return 'GLONASS';
     if (prn >= 141 && prn <= 172) return 'BeiDou';
-    if (prn >= 183 && prn <= 197) return 'QZSS';
+    if (prn >= 183 && prn <= 202) return 'QZSS';
     if (prn >= 301 && prn <= 330) return 'Galileo';
   }
   return 'GPS';
+}
+
+// QZSS の Strict PRN（1〜10）を Extended PRN（193〜202）に正規化する。
+// Extended モード（PRN>=100）の場合はそのまま返す。
+// これにより GPS PRN との衝突を防ぎ、Strict/Extended 両方で一意なキーが確保される。
+function normalizeQzssPrn(prn) {
+  return (prn >= 1 && prn < 100) ? prn + 192 : prn;
 }
 
 const handlers = {
@@ -159,14 +167,20 @@ const handlers = {
   GSA(p) {
     if (p.length < 18) return;
     gps.fix_mode = p[2] ? parseInt(p[2]) : 1;
-    // Stamp each listed PRN with the current time. Multiple GSA sentences
-    // (one per constellation) all accumulate into the same satellites map.
-    // The "used" flag is derived from usedAt freshness in cleanupSatellites().
+    // NMEA 4.1+ の末尾システムID (p[18]) を読む。
+    // 5=QZSS の場合は Strict PRN（1-10）を Extended（193-202）へ正規化する。
+    const sysId = p[18] ? parseInt(p[18]) : 0;
     const now = Date.now();
     for (let i = 3; i < 15 && i < p.length; i++) {
       if (p[i]) {
-        const n = parseInt(p[i]);
-        if (!isNaN(n) && gps.satellites[n]) gps.satellites[n].usedAt = now;
+        let n = parseInt(p[i]);
+        if (!isNaN(n)) {
+          if (sysId === 5) n = normalizeQzssPrn(n);  // QZSS Strict→Extended
+          if (gps.satellites[n]) {
+            gps.satellites[n].usedAt   = now;
+            gps.satellites[n].lastSeen = now;
+          }
+        }
       }
     }
     if (p[15]) gps.pdop = parseFloat(p[15]);
@@ -180,8 +194,10 @@ const handlers = {
     if (!gsv_buf[talker]) gsv_buf[talker] = {};
     let i = 4;
     while (i + 3 < p.length) {
-      const prn = p[i] ? parseInt(p[i]) : null;
+      let prn = p[i] ? parseInt(p[i]) : null;
       if (prn !== null && !isNaN(prn)) {
+        // QZSS Strict モード (PRN 1-10) → Extended (193-202) へ正規化
+        if (talker === 'GQ') prn = normalizeQzssPrn(prn);
         const el  = p[i+1] ? parseFloat(p[i+1]) : 0;
         const az  = p[i+2] ? parseFloat(p[i+2]) : 0;
         const snr = p[i+3] ? parseFloat(p[i+3]) : null;
@@ -275,7 +291,11 @@ function feedNMEA(raw) {
 
 // ── Satellite Cleanup ─────────────────────────────────────────────────────────
 
-const SAT_STALE_MS = 1500;
+// GSV は低レートで送られることがある（MAX-M10M 実測で約6秒間隔）ため
+// 削除タイムアウトは余裕を持って長めにする。
+// used フラグは GSA が毎秒来るので短くても問題ない。
+const SAT_STALE_MS      = 15000;  // 衛星エントリを削除するまでの時間 (ms)
+const SAT_USED_STALE_MS =  3000;  // used フラグを落とすまでの時間 (ms)
 
 function cleanupSatellites() {
   const now = Date.now();
@@ -284,7 +304,7 @@ function cleanupSatellites() {
     if (now - sat.lastSeen > SAT_STALE_MS) {
       delete gps.satellites[prn];
     } else {
-      sat.used = sat.usedAt !== null && (now - sat.usedAt < SAT_STALE_MS);
+      sat.used = sat.usedAt !== null && (now - sat.usedAt < SAT_USED_STALE_MS);
     }
   }
 }
@@ -433,6 +453,10 @@ session.onState(({ connected }) => {
 // ── Teseo Tool (extracted) ───────────────────────────────────────────────────
 
 initTeseoTool({ session });
+
+// ── u-blox M10 Tool ──────────────────────────────────────────────────────────
+
+initUbloxM10Tool({ session });
 
 // ── Sky View Canvas ───────────────────────────────────────────────────────────
 
@@ -1977,6 +2001,26 @@ setInterval(function() { render(); updateMap(); }, 500);
       window.addEventListener('pointerup',     onStop);
       window.addEventListener('pointercancel', onStop);
       e.preventDefault();
+    });
+  })();
+
+  // ── Settings Dropdown ─────────────────────────────────────────────────────
+  (function() {
+    const btnSettings = document.getElementById('btn-settings');
+    const settingsMenu = document.getElementById('settings-menu');
+    if (!btnSettings || !settingsMenu) return;
+
+    btnSettings.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsMenu.classList.toggle('open');
+    });
+
+    settingsMenu.addEventListener('click', () => {
+      settingsMenu.classList.remove('open');
+    });
+
+    document.addEventListener('click', () => {
+      settingsMenu.classList.remove('open');
     });
   })();
 
