@@ -1,6 +1,6 @@
 # gnss.hinatan.dev
 
-Web Serial API を使って GNSS モジュールとブラウザを直結し、NMEA の表示・解析や、STMicroelectronics の GNSS モジュール **Teseo-LIV3FL** の設定を行うための静的 HTML ツール集です。
+Web Serial API を使って GNSS モジュールとブラウザを直結し、NMEA の表示・解析や、各種 GNSS モジュールの設定を行うための静的 HTML ツール集です。
 
 公開サイト： https://gnss.hinatan.dev/
 
@@ -17,7 +17,8 @@ Web Serial API を使って GNSS モジュールとブラウザを直結し、NM
 ## できること
 
 - **GNSS NMEA Viewer**：受信した NMEA を表示・解析
-- **Teseo-LIV3FL Settings**：Teseo-LIV3FL の設定変更（対応機種のみ）
+- **Teseo-LIV3FL Settings**：Teseo-LIV3FL の設定変更（PSTMGETPAR / PSTMSETPAR）
+- **u-blox M10 Settings**：u-blox M10 の設定変更（CFG-VALGET / CFG-VALSET、UBX バイナリ）
 
 ## 使い方（利用者向け）
 
@@ -28,7 +29,7 @@ Web Serial API を使って GNSS モジュールとブラウザを直結し、NM
 
 ### 開くページ
 
-- 統合版（Viewer + Teseo 設定）：https://gnss.hinatan.dev/
+- 統合版（Viewer + モジュール設定）：https://gnss.hinatan.dev/
 - Viewer のみ（旧/簡易版）：https://gnss.hinatan.dev/simple.html
 - Teseo 単体版：https://gnss.hinatan.dev/teseo-liv3fl/
 
@@ -40,6 +41,15 @@ Web Serial API を使って GNSS モジュールとブラウザを直結し、NM
 4. 必要に応じて **Baudrate** を選択します（モジュール側設定と一致させてください）。
 
 > Note: 接続時に OS の権限確認が出る場合があります。
+
+### モジュール設定ツールを開く
+
+統合版（`/`）の右上にある **⚙** ボタンをクリックするとメニューが開きます。
+
+| メニュー項目 | 対象モジュール |
+|---|---|
+| Teseo-LIV3FL | STMicroelectronics Teseo-LIV3FL |
+| u-blox M10 | u-blox M10 (SPG 5.20) |
 
 ### よくあるつまずき
 
@@ -75,7 +85,7 @@ Web Serial API を使って GNSS モジュールとブラウザを直結し、NM
    ```
 
 2. ブラウザで開きます。
-   - 統合版（Viewer + Teseo モーダル）：`http://localhost:8000/`
+   - 統合版（Viewer + モジュール設定）：`http://localhost:8000/`
    - Viewer のみ（旧/簡易版）：`http://localhost:8000/simple.html`
    - Teseo 単体版：`http://localhost:8000/teseo-liv3fl/`
 

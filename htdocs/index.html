@@ -43,7 +43,20 @@
     <button class="btn" id="btn-reset">Reset</button>
     <button class="btn" id="btn-rec-toggle">&#9679; REC</button>
     <button class="btn" id="btn-rec">Sessions</button>
-    <button class="btn" id="btn-teseo">TESEO</button>
+    <div class="settings-dropdown-wrap" id="settings-dropdown-wrap">
+      <button class="btn" id="btn-settings" title="Module Settings">&#9881;</button>
+      <div class="settings-menu" id="settings-menu">
+        <div class="settings-menu-label">Module Settings</div>
+        <button class="settings-menu-item" id="btn-teseo">
+          <span class="settings-menu-dot" style="background:var(--magenta)"></span>
+          Teseo-LIV3FL
+        </button>
+        <button class="settings-menu-item" id="btn-m10">
+          <span class="settings-menu-dot" style="background:var(--cyan)"></span>
+          u-blox M10
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -425,9 +438,165 @@
   </div>
 </div>
 
+<!-- ─── u-blox M10 Overlay ─────────────────────────────────────────────────── -->
+<div id="ublox-overlay" aria-hidden="true">
+  <div class="m10-backdrop" id="m10-backdrop"></div>
+  <div class="m10-panel" role="dialog" aria-modal="true" aria-label="u-blox M10 Settings">
+    <div class="m10-hdr">
+      <div class="m10-title">
+        <div class="name">u-blox M10 Settings</div>
+        <div class="sub">CFG-VALGET / CFG-VALSET (UBX Binary)</div>
+      </div>
+      <div class="m10-controls">
+        <button class="btn" id="m10-btn-read">Read</button>
+        <button class="btn" id="m10-btn-write">Write RAM</button>
+        <span class="m10-btn-wrap" id="m10-wrap-save-flash"><button class="btn" id="m10-btn-save-flash">Save Flash</button></span>
+        <span class="m10-btn-wrap" id="m10-wrap-save-bbr"><button class="btn" id="m10-btn-save-bbr">Save BBR</button></span>
+        <button class="btn" id="m10-btn-reset">Soft Reset</button>
+        <button class="btn" id="m10-btn-export">Export</button>
+        <button class="btn" id="m10-btn-import">Import</button>
+        <input type="file" id="m10-import-file" accept=".json" style="display:none">
+        <button class="btn" id="m10-btn-close">Close</button>
+      </div>
+    </div>
+    <div class="m10-body">
+      <div class="app" id="m10-app">
+        <div class="statusbar">
+          <div class="status-card">
+            <div class="status-key">Connection</div>
+            <div id="m10-st-conn" class="status-val bad">DISCONNECTED</div>
+          </div>
+          <div class="status-card">
+            <div class="status-key">Firmware</div>
+            <div id="m10-st-fw" class="status-val">Unknown</div>
+          </div>
+          <div class="status-card">
+            <div class="status-key">Pending</div>
+            <div id="m10-st-pending" class="status-val warn">0</div>
+          </div>
+          <div class="status-card">
+            <div class="status-key">Last Action</div>
+            <div id="m10-st-status" class="status-val">Idle</div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="m10-tab-btn active" data-tab="gnss">GNSS</button>
+          <button class="m10-tab-btn" data-tab="sbas">SBAS</button>
+          <button class="m10-tab-btn" data-tab="nmea">NMEA</button>
+          <button class="m10-tab-btn" data-tab="nav">Navigation</button>
+          <button class="m10-tab-btn" data-tab="rate">Rate / Serial</button>
+          <button class="m10-tab-btn" data-tab="tp">Timepulse</button>
+        </div>
+
+        <main class="main" id="m10-main">
+
+          <!-- GNSS tab -->
+          <section id="m10-tab-gnss" class="panel">
+            <h2>GNSS Systems &amp; Signals</h2>
+            <div id="m10-gnss-grid" class="grid"></div>
+            <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
+              System = コンステレーション有効化 / Signal = 個別周波数帯有効化。
+              変更後は Write RAM → Save Flash で永続化してください。
+            </div>
+          </section>
+
+          <!-- SBAS tab -->
+          <section id="m10-tab-sbas" class="panel hidden">
+            <h2>SBAS Configuration</h2>
+            <div id="m10-sbas-grid" class="grid"></div>
+            <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
+              SBAS System を有効にした上で各オプションを設定してください。
+            </div>
+          </section>
+
+          <!-- NMEA tab -->
+          <section id="m10-tab-nmea" class="panel">
+            <h2>NMEA Message Output (UART1)</h2>
+            <div id="m10-nmea-grid" class="grid list"></div>
+            <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
+              有効にするとUART1へ1エポックごとに出力されます。
+            </div>
+          </section>
+          <section id="m10-tab-nmea-extra" class="panel hidden">
+            <h2>NMEA Protocol Settings</h2>
+            <div id="m10-nmea-proto" class="grid"></div>
+          </section>
+
+          <!-- Navigation tab -->
+          <section id="m10-tab-nav" class="panel hidden">
+            <h2>Navigation Filter</h2>
+            <div id="m10-nav-grid" class="grid"></div>
+            <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
+              Dynamic Model は用途に合わせて設定すると測位精度が向上します。
+            </div>
+          </section>
+
+          <!-- Rate / Serial tab -->
+          <section id="m10-tab-rate" class="panel hidden">
+            <h2>Measurement Rate</h2>
+            <div class="grid">
+              <div class="item">
+                <div class="label">Measurement Rate</div>
+                <select id="m10-cfg-rate-meas"></select>
+              </div>
+              <div class="item">
+                <div class="label">Nav Solution Ratio</div>
+                <select id="m10-cfg-rate-nav"></select>
+              </div>
+            </div>
+          </section>
+          <section id="m10-tab-rate-extra" class="panel hidden">
+            <h2>UART1 Settings</h2>
+            <div class="grid">
+              <div class="item">
+                <div class="label">Baudrate</div>
+                <select id="m10-cfg-baud"></select>
+              </div>
+            </div>
+            <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
+              Note: Baudrate変更後はデバイス側とビューワーのBaudを合わせてください。
+            </div>
+          </section>
+          <section id="m10-tab-rate-proto" class="panel hidden">
+            <h2>UART1 Input Protocols</h2>
+            <div id="m10-inprot-grid" class="grid"></div>
+          </section>
+          <section id="m10-tab-rate-outproto" class="panel hidden">
+            <h2>UART1 Output Protocols</h2>
+            <div id="m10-outprot-grid" class="grid"></div>
+          </section>
+
+          <!-- Timepulse tab -->
+          <section id="m10-tab-tp" class="panel hidden">
+            <h2>Timepulse TP1 (PPS)</h2>
+            <div id="m10-tp-grid" class="grid"></div>
+            <div class="row" style="margin-top:10px; color: var(--t-muted); font-size: 11px;">
+              Period / Length の単位は μs です。1秒 = 1,000,000 μs。
+            </div>
+            <canvas id="m10-tp-chart" style="display:block;width:100%;height:220px;border-radius:6px;margin-top:12px;background:#0d0d0d;"></canvas>
+          </section>
+
+          <!-- Log (always visible) -->
+          <section class="panel log-panel">
+            <h2>UBX Log</h2>
+            <div id="m10-log" class="log log-view" tabindex="0" data-placeholder="送信UBXパケット (&gt;&gt;) と受信レスポンス (&lt;&lt;) がここに表示されます"></div>
+          </section>
+
+        </main>
+
+        <footer>
+          Tip: Read で現在設定を取得。Write RAM でRAMに適用。Save Flash / Save BBR で永続化（型番により自動で無効化）。Soft Reset でモジュール再起動。
+        </footer>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="./serial-session.js"></script>
 <script src="./nmea-recorder.js"></script>
 <script src="./teseo-tool.js"></script>
+<script src="./ublox-m10-tool.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="app.js"></script>
 

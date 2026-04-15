@@ -13,6 +13,7 @@
       this._buf = '';
       this._lineListeners = new Set();
       this._stateListeners = new Set();
+      this._byteListeners = new Set();
       this._textDecoder = new TextDecoder();
       this._textEncoder = new TextEncoder();
     }
@@ -29,6 +30,11 @@
     onState(cb) {
       this._stateListeners.add(cb);
       return () => this._stateListeners.delete(cb);
+    }
+
+    onBytes(cb) {
+      this._byteListeners.add(cb);
+      return () => this._byteListeners.delete(cb);
     }
 
     _emitState() {
@@ -80,7 +86,12 @@
           while (this._active) {
             const { value, done } = await this._reader.read();
             if (done) break;
-            if (value) this.ingestText(this._textDecoder.decode(value, { stream: true }));
+            if (value) {
+              for (const cb of this._byteListeners) {
+                try { cb(value); } catch { /* ignore */ }
+              }
+              this.ingestText(this._textDecoder.decode(value, { stream: true }));
+            }
           }
         } finally {
           try {
@@ -132,6 +143,11 @@
       const cs = this.checksum(sentence);
       const msg = `$${sentence}*${cs}\r\n`;
       await this._writer.write(this._textEncoder.encode(msg));
+    }
+
+    async sendBytes(bytes) {
+      if (!this._writer) throw new Error('Not connected');
+      await this._writer.write(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
     }
   }
 
