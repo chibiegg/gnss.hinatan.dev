@@ -101,25 +101,28 @@ function parseDate(d) {
 }
 
 function systemFromTalker(talker, prn) {
-  // Prefer explicit PRN ranges so mixed talkers still map correctly.
+  // 明示的なタリアを優先する。ただし GP は SBAS（PRN 33-64）の例外あり。
+  // GA/GL/GB/GQ はそのまま星座に対応するため PRN 範囲に関わらずタリア優先。
+  // GN（マルチコンステレーション）や不明なタリアは正規化済み PRN 範囲で判定する。
+  if (talker === 'GA') return 'Galileo';
+  if (talker === 'GL') return 'GLONASS';
+  if (talker === 'GB' || talker === 'BD') return 'BeiDou';
+  if (talker === 'GQ') return 'QZSS';
+  if (talker === 'GP') {
+    // GPGSV に SBAS（PRN 33-64）が混在することがあるため範囲判定を残す
+    if (prn >= 33 && prn <= 64) return 'SBAS';
+    return 'GPS';
+  }
+
+  // GN またはタリア不明の場合は正規化済み PRN 範囲で判定。
+  if (prn >= 401 && prn <= 463) return 'BeiDou'; // 正規化済み BeiDou
+  if (prn >= 301 && prn <= 336) return 'Galileo'; // 正規化済み Galileo
   if (prn >= 193 && prn <= 202) return 'QZSS';   // Extended or normalized Strict
   if (prn >= 183 && prn <= 192) return 'QZSS';   // older Extended range
-  if (prn >= 141 && prn <= 172) return 'BeiDou';
-  if (prn >= 301 && prn <= 330) return 'Galileo';
+  if (prn >= 141 && prn <= 172) return 'BeiDou';  // GN文での旧来BeiDou範囲
   if (prn >= 65  && prn <= 92)  return 'GLONASS';
   if (prn >= 33  && prn <= 64)  return 'SBAS';
   if (prn >= 1   && prn <= 32)  return 'GPS';
-
-  const map = { GP:'GPS', GL:'GLONASS', GA:'Galileo', GB:'BeiDou', BD:'BeiDou', GQ:'QZSS' };
-  if (map[talker]) return map[talker];
-  if (talker === 'GN') {
-    if (prn >= 1   && prn <= 32)  return 'GPS';
-    if (prn >= 33  && prn <= 64)  return 'SBAS';
-    if (prn >= 65  && prn <= 92)  return 'GLONASS';
-    if (prn >= 141 && prn <= 172) return 'BeiDou';
-    if (prn >= 183 && prn <= 202) return 'QZSS';
-    if (prn >= 301 && prn <= 330) return 'Galileo';
-  }
   return 'GPS';
 }
 
@@ -128,6 +131,20 @@ function systemFromTalker(talker, prn) {
 // これにより GPS PRN との衝突を防ぎ、Strict/Extended 両方で一意なキーが確保される。
 function normalizeQzssPrn(prn) {
   return (prn >= 1 && prn < 100) ? prn + 192 : prn;
+}
+
+// Galileo の GAGSV 内 PRN（1〜36）を内部キー用に正規化する（301〜336）。
+// これにより GPS PRN（1〜32）との衝突を防ぐ。
+// すでに 300 以上（正規化済みまたは受信機が拡張形式）はそのまま返す。
+function normalizeGalileoPrn(prn) {
+  return (prn >= 1 && prn <= 36) ? prn + 300 : prn;
+}
+
+// BeiDou の GBGSV 内 PRN（1〜63）を内部キー用に正規化する（401〜463）。
+// これにより GPS（1〜32）・Galileo正規化後（301〜336）・QZSS（183〜202）との衝突を防ぐ。
+// すでに 400 以上はそのまま返す。
+function normalizeBeidouPrn(prn) {
+  return (prn >= 1 && prn <= 63) ? prn + 400 : prn;
 }
 
 const handlers = {
@@ -175,7 +192,9 @@ const handlers = {
       if (p[i]) {
         let n = parseInt(p[i]);
         if (!isNaN(n)) {
-          if (sysId === 5) n = normalizeQzssPrn(n);  // QZSS Strict→Extended
+          if (sysId === 5) n = normalizeQzssPrn(n);    // QZSS Strict→Extended
+          if (sysId === 3) n = normalizeGalileoPrn(n); // Galileo PRN→301-336
+          if (sysId === 4) n = normalizeBeidouPrn(n);  // BeiDou PRN→401-463
           if (gps.satellites[n]) {
             gps.satellites[n].usedAt   = now;
             gps.satellites[n].lastSeen = now;
@@ -198,6 +217,10 @@ const handlers = {
       if (prn !== null && !isNaN(prn)) {
         // QZSS Strict モード (PRN 1-10) → Extended (193-202) へ正規化
         if (talker === 'GQ') prn = normalizeQzssPrn(prn);
+        // Galileo (PRN 1-36) → 内部キー (301-336) へ正規化（GPS PRN との衝突防止）
+        if (talker === 'GA') prn = normalizeGalileoPrn(prn);
+        // BeiDou (PRN 1-63) → 内部キー (401-463) へ正規化（GPS・Galileo との衝突防止）
+        if (talker === 'GB' || talker === 'BD') prn = normalizeBeidouPrn(prn);
         const el  = p[i+1] ? parseFloat(p[i+1]) : 0;
         const az  = p[i+2] ? parseFloat(p[i+2]) : 0;
         const snr = p[i+3] ? parseFloat(p[i+3]) : null;
